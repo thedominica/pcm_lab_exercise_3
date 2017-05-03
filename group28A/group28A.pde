@@ -28,15 +28,12 @@ void draw(){
 //called every time a new frame is available to read
 void movieEvent(Movie m){
   m.read();
-  PImage p = createImage(m.width, m.height, RGB);
-  p.copy(m, 0, 0, m.width, m.height, 0, 0, m.width, m.height);
-  println("copy pixels[]: " + p.pixels[0]);
-  color c = p.get(10,10);
-  println("copy getPixels: " + red(c) + " g: " + green(c) + " ,b: " + blue(c));
-  p.set(10,10,color(100,100,100));
-  color c1 = p.get(10,10);
-  println("copy after: " + red(c1) + " g: " + green(c1) + " b: " + blue(c1));
-  fold3by3(gaussian);
+  
+  fold3by3(average, m);
+  //PImage p = createImage(m.width, m.height, RGB);
+  //p.copy(m, 0, 0, m.width, m.height, 0, 0, m.width, m.height);
+
+  //fold3by3(gaussian);
 }
 
 /*TODO folding:
@@ -50,13 +47,56 @@ void movieEvent(Movie m){
 
 8. opt: do it also for 5x5
 */
-float[][] fold3by3(float[][] filter){
+PImage fold3by3(float[][] filter, PImage originalFrame){
+  PImage result = createImage(originalFrame.width, originalFrame.height, RGB);
+  result.copy(originalFrame, 0, 0, originalFrame.width, originalFrame.height, 0, 0, originalFrame.width, originalFrame.height);
+  
+  println("copy pixels[]: " + result.pixels[0]);
+  color c = result.get(10,10);
+  println("copy getPixels: " + red(c) + " g: " + green(c) + " ,b: " + blue(c));
+  result.set(10,10,color(100,100,100));
+  color c1 = result.get(10,10);
+  println("copy after: " + red(c1) + " g: " + green(c1) + " b: " + blue(c1));
+  
   movie.loadPixels();
   //println("pixels[]: " + movie.pixels[0]);
   color c = movie.get(10,10);
   println("getPixels: " + red(c) + " g: " + green(c) + " ,b: " + blue(c));
 
+  for(int x = 0; x < result.width; x++){
+    for(int y = 0; y < result.height; y++){
+       calculatePixelFolding(filter, originalFrame, result, x, y);
+    }
+  }
+
   return null;
+}
+
+color calculatePixelFolding(float[][] filter, PImage originalFrame, PImage result, int positionX, int positionY){
+  int sumRed = 0;
+  int sumGreen = 0;
+  int sumBlue = 0;
+  for(int i = -1; i <= 1; i++){
+    for(int j = -1; j <= 1; j++){
+      int currentX;
+      int currentY;
+      if(positionX + i < 0 || positionX + i >= result.width){
+        currentX = positionX;
+      }
+      else{
+         currentX = positionX +i; 
+      }
+      if(positionY + j < 0 || positionY + i >= result.height){
+        currentY = positionY;
+      }
+      else{
+         currentY = positionY +j; 
+      }
+      //sumuptheposition
+    }
+  }
+  
+  return 0; 
 }
 
 float[][] fold5by5(float[][] filter){
