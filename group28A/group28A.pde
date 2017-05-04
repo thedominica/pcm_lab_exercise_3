@@ -1,8 +1,7 @@
 import processing.video.*;
 Movie movie;
 PImage filtered;
-int counter = 0;
-int counterEvent = 0;
+
 //low pass filters
 final float[][] average = {    {1/9f,1/9f,1/9f},
                                {1/9f,1/9f,1/9f},
@@ -15,7 +14,8 @@ final float[][] bigGaussian = {  {1/256f, 4/256f,  6/256f,  4/256f,  1/256f},
                                  {6/256f, 24/256f, 36/256f, 24/256f, 6/256f},
                                  {4/256f, 16/256f, 24/256f, 16/256f, 4/256f},
                                  {1/256f, 4/256f,  6/256f,  4/256f,  1/256f}  };
-                                 
+   
+//high pass filters
 final float[][] sharpen1 = {  {-1, -1, -1},
                              {-1, 9, -1},
                              {-1, -1, -1}};
@@ -23,6 +23,23 @@ final float[][] sharpen1 = {  {-1, -1, -1},
 final float[][] sharpen2 = {  {0,-1,0}, 
                               {-1,5,-1},
                               {0,-1,0}};
+//edge detection                              
+final float[][] laplacian1 = {  {-1,-1,-1}, 
+                               {-1,8,-1},
+                               {-1,-1,-1}};
+                               
+final float[][] laplacian2 = {  {0,-1,0},
+                                {-1,4,-1}, 
+                                {0,-1,0}};
+                                
+final float[][] sobelVertical = {   {-1,0,1},
+                                    {-2,0,2}, 
+                                    {-1,0,1}};
+                                    
+final float[][] sobelHorizontal = { {-1,-2,-1},
+                                    {0,0,0},
+                                    {1,2,1}};
+          
                              
 
 void setup(){
@@ -32,37 +49,22 @@ void setup(){
 }
 
 void draw(){
-  //tint(255,20);
-  image(movie, 0, 0);
-  //image(filtered,0,0);
   if(filtered == null){
-    println("filtered null");
     image(movie,0,0);
   }
   else{
-    println("filtered");
     image(filtered,0,0);
   }
-  println("counter draw: " + counter ++);
   
 }
 
 //called every time a new frame is available to read
 void movieEvent(Movie m){
-  //println("counterevent: " + counterEvent++);
   m.read();
-
-  filtered = fold3by3(sharpen1, m);
-  //movie.stop();
-
-  println("counter event: " + counterEvent++);
-  //PImage p = createImage(m.width, m.height, RGB);
-  //p.copy(m, 0, 0, m.width, m.height, 0, 0, m.width, m.height);
-
-  //fold3by3(gaussian);
+  filtered = fold3by3(sobelHorizontal, m);
 }
 
-/*TODO folding:
+/* folding step by step:
 1. make copy of the current frame
 2. mess in the copy of the frame
 3. iterate over the copy of the frame(2dim)
@@ -70,51 +72,22 @@ void movieEvent(Movie m){
 5. care for borders (copy most outer value thats accessible)
 6. do it for every channel (or find a way how to do it in once)
 7. choose to show the copy instead of the original
-
-8. opt: do it also for 5x5
 */
 PImage fold3by3(float[][] filter, PImage originalFrame){
   
   PImage result = createImage(originalFrame.width, originalFrame.height, RGB);
   result.copy(originalFrame, 0, 0, originalFrame.width, originalFrame.height, 0, 0, originalFrame.width, originalFrame.height);
-  /*
-  println("copy pixels[]: " + result.pixels[0]);
-  color c = result.get(10,10);
-  println("copy getPixels: " + red(c) + " g: " + green(c) + " ,b: " + blue(c));
-  //result.set(10,10,color(100,100,100));
-  color c1 = result.get(10,10);
-  println("copy after: " + red(c1) + " g: " + green(c1) + " b: " + blue(c1));
-  */
-  //movie.loadPixels();
-  //println("pixels[]: " + movie.pixels[0]);
-  //color c = movie.get(10,10);
-  //println("getPixels: " + red(c) + " g: " + green(c) + " ,b: " + blue(c));
- //println("widht: " + result.width + " height: " + result.height);
 
-for(int x = 0; x < result.width; x++){
-  
-    for(int y = 0; y < result.height; y++){
-       color pixelResult = calculatePixelFolding(filter, originalFrame, result, x, y);
-       //println("color result pixel r: " + red(pixelResult) + " ,g: " + green(pixelResult) + " ,b: " + blue(pixelResult));
-       result.set(x,y,pixelResult);
-}
 
-  
-}
-println("10,10: original: r: " + red(originalFrame.get(10,10)) + " , g: " + green(originalFrame.get(10,10)) + " b: " + blue(originalFrame.get(10,10)));
-println("10,10: r: " + red(result.get(10,10)) + " ,g: " + green(result.get(10,10)) + " ,b: " + blue(result.get(10,10)));
-//image(originalFrame,0,0);
-return result;
-
-/*for(int x = 0; x < result.width; x++){
-    for(int y = 0; y < result.height; y++){
-
-       println("something in the loop, x= " + x + " y= " + y);
+  for(int x = 0; x < result.width; x++){
+      for(int y = 0; y < result.height; y++){
+         color pixelResult = calculatePixelFolding(filter, originalFrame, result, x, y);
+         result.set(x,y,pixelResult);
     }
   }
-  */
+  
+  return result;
 
-  //return null;
 }
 
 color calculatePixelFolding(float[][] filter, PImage originalFrame, PImage result, int positionX, int positionY){
@@ -127,6 +100,8 @@ color calculatePixelFolding(float[][] filter, PImage originalFrame, PImage resul
       
       int currentX;
       int currentY;
+      //get position in the original image
+      //take the borders into account, copy the most outer value if it is outside the image
       if(positionX + i < 0 || positionX + i >= result.width){
         currentX = positionX;
       }
@@ -141,18 +116,13 @@ color calculatePixelFolding(float[][] filter, PImage originalFrame, PImage resul
       }
       //sumuptheposition
       color current = originalFrame.get(currentX,currentY);
-      sumRed += red(current);
-      sumGreen += green(current);
-      sumBlue += blue(current);
+      //apply the actual filter, +1 to get the actual position in the array since we start with i= -1
+      sumRed += red(current)*filter[i+1][j+1];
+      sumGreen += green(current)*filter[i+1][j+1];
+      sumBlue += blue(current)*filter[i+1][j+1];
       
     }
   }
   
   return color(sumRed, sumGreen, sumBlue);
-  
-  //return 0; 
-}
-
-float[][] fold5by5(float[][] filter){
- return null; 
 }
